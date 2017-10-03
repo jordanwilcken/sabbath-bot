@@ -104,6 +104,7 @@
     <Reference Include="System.Xml.Linq" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="css.css" />
     <Content Include="default.htm" />
     <Content Include="bot-client.js" />
     <Content Include="Global.asax" />
@@ -126,6 +127,7 @@
     </Content>
     <Content Include="elm-src\Main.elm" />
     <Content Include="elm-package.json" />
+    <Content Include="README.md" />
     <None Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>
     </None>
