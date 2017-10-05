@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Web.Http;
 
-namespace Bot_Application1
+namespace Sabbath.Bot
 {
 	public static class WebApiConfig
 	{

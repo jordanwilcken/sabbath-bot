@@ -12738,12 +12738,20 @@ var _user$project$Main$speechBubbleClassList = function (model) {
 		{
 			ctor: '::',
 			_0: {ctor: '_Tuple2', _0: 'hidden', _1: false},
-			_1: {ctor: '[]'}
+			_1: {
+				ctor: '::',
+				_0: {ctor: '_Tuple2', _0: 'inline-block', _1: true},
+				_1: {ctor: '[]'}
+			}
 		}) : _elm_lang$html$Html_Attributes$classList(
 		{
 			ctor: '::',
 			_0: {ctor: '_Tuple2', _0: 'hidden', _1: true},
-			_1: {ctor: '[]'}
+			_1: {
+				ctor: '::',
+				_0: {ctor: '_Tuple2', _0: 'inline-block', _1: false},
+				_1: {ctor: '[]'}
+			}
 		});
 };
 var _user$project$Main$Model = F2(
@@ -12770,11 +12778,15 @@ var _user$project$Main$view = function (model) {
 				_elm_lang$html$Html$img,
 				{
 					ctor: '::',
-					_0: _elm_lang$html$Html_Attributes$src('sabbath-bot.jpg'),
+					_0: _elm_lang$html$Html_Attributes$id('sabbath-bot'),
 					_1: {
 						ctor: '::',
-						_0: _elm_lang$html$Html_Events$onClick(_user$project$Main$SaySomethingNew),
-						_1: {ctor: '[]'}
+						_0: _elm_lang$html$Html_Attributes$src('sabbath-bot.jpg'),
+						_1: {
+							ctor: '::',
+							_0: _elm_lang$html$Html_Events$onClick(_user$project$Main$SaySomethingNew),
+							_1: {ctor: '[]'}
+						}
 					}
 				},
 				{ctor: '[]'}),
