@@ -1,31 +1,55 @@
-﻿using System;
-using System.Threading.Tasks;
-using Microsoft.Bot.Builder.Dialogs;
+﻿using Microsoft.Bot.Builder.Dialogs;
 using Microsoft.Bot.Connector;
+using System;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
-namespace Bot_Application1.Dialogs
+namespace Sabbath.Bot.Dialogs
 {
-	[Serializable]
+    [Serializable]
 	public class RootDialog : IDialog<object>
 	{
 		public Task StartAsync(IDialogContext context)
 		{
-			context.Wait(MessageReceivedAsync);
+            context.Wait(MessageReceivedAsync);
 
 			return Task.CompletedTask;
 		}
 
-		private async Task MessageReceivedAsync(IDialogContext context, IAwaitable<object> result)
-		{
-			var activity = await result as Activity;
+        private async Task MessageReceivedAsync(IDialogContext context, IAwaitable<IMessageActivity> result)
+        {
+            var message = await result;
 
-			// calculate something for us to return
-			int length = (activity.Text ?? string.Empty).Length;
+            await this.SendWelcomeMessageAsync(context);
+        }
 
-			// return our reply to the user
-			await context.PostAsync($"You sent {activity.Text} which was {length} characters");
+        private async Task SendWelcomeMessageAsync(IDialogContext context)
+        {
+            await context.PostAsync("Hi, let me tell you a joke.  Do you want to hear about chickens or lawyers?");
 
-			context.Wait(MessageReceivedAsync);
-		}
+            context.Wait(JokeTypeSelectedAsync);
+        }
+
+        private async Task JokeTypeSelectedAsync(IDialogContext context, IAwaitable<IMessageActivity> result)
+        {
+            var whatUserSaid = await result;
+
+            if (Regex.IsMatch(whatUserSaid.Text, "chicken", RegexOptions.IgnoreCase))
+            {
+                context.Call(new ChickenJokeDialog(), this.JokeDialogResumeAfter);
+            }
+            else
+            {
+                await context.PostAsync("Lawyer jokes it is then!");
+                context.Call(new LawyerJokeDialog(), JokeDialogResumeAfter);
+            }
+        }
+
+        private async Task JokeDialogResumeAfter(IDialogContext context, IAwaitable<object> result)
+        {
+            var returnValue = await result;
+            await context.PostAsync("Thanks for joking!");
+            await this.SendWelcomeMessageAsync(context);
+        }
 	}
 }
