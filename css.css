@@ -1,0 +1,28 @@
+.hidden {
+    display: none;
+}
+
+.inline-block {
+    display: inline-block;
+}
+
+main {
+  margin: 5% auto;
+  max-width: 70%;
+}
+
+#sabbath-bot-bounds {
+  border: 1px solid grey;
+}
+
+#speech-bubble {
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 1em;
+    padding: 0.5em;
+    vertical-align: top;
+    width: 18em;
+}
+
+#text-input {
+    width: 100%;
+}

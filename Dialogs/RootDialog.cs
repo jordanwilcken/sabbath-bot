@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.Bot.Builder.Dialogs;
 using Microsoft.Bot.Connector;
 
-namespace Bot_Application1.Dialogs
+namespace Sabbath.Bot.Dialogs
 {
 	[Serializable]
 	public class RootDialog : IDialog<object>
