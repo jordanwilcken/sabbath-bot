@@ -8,13 +8,14 @@ import Ports
 import Random
 import RemoteData exposing (RemoteData)
 import Return exposing (Return, map)
+import Task
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (on, onClick)
 
 
 view model =
-    node "main" []
+    node "main" [ id "the-main" ]
         [ div [ id "sabbath-bot-bounds"]
             [ img
                 [ id "sabbath-bot"
@@ -35,14 +36,20 @@ view model =
 
 viewSelectedVideo : Maybe Video -> Html Msg
 viewSelectedVideo maybeVideo =
-    case maybeVideo of
-        Just video ->
-            div [ class "intrinsic-container intrinsic-container-4x3" ]
-                [ iframe [ src video.url ] []
-                ]
+    let
+        ( containerClass, containerChildren ) =
+            case maybeVideo of
+                Just video ->
+                    ( "intrinsic-container intrinsic-container-4x3", [ iframe [ src video.url ] [] ] )
 
-        Nothing ->
-            div [ class "hidden" ] []
+                Nothing ->
+                    ( "hidden", [] )
+    in
+    div
+        [ id "video-container"
+        , class containerClass
+        ]
+        containerChildren
 
 
 viewBubbleContent speechBubbleContent =
@@ -212,6 +219,7 @@ type Msg
     | ChangeBubbleContent SpeechBubbleContent
     | VideosResponseReceived Int (RemoteData.WebData (List Video))
     | VideoSelected Video
+    | Nevermind
 
 
 type BotPart
@@ -240,6 +248,10 @@ update msg model =
         VideoSelected video ->
             ( model, Cmd.none )
                 |> Return.map (\_ -> { model | selectedVideo = Just video })
+                |> Return.command (Ports.scrollIntoView "video-container")
+
+        Nevermind ->
+            ( model, Cmd.none )
 
 
 respondToClick botPart theReturn =

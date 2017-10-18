@@ -39,6 +39,12 @@
                 return (distanceFromBottom / height) <= 0.3
             }
         });
+
+        elmApp.ports.scrollIntoView.subscribe(function (id) {
+            setTimeout( function() {
+                document.getElementById(id).scrollIntoView();
+            }, 1000)
+        });
     </script>
 </body>
 </html>
