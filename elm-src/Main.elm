@@ -1,5 +1,6 @@
 module Main exposing (main)
 
+import Http
 import Json.Decode as Decode
 import Json.Encode as Encode
 import List.More
@@ -28,17 +29,54 @@ view model =
                 [ viewBubbleContent model.speechBubbleContent ]
             ]
         , input [ id "text-input" ] []
+        , viewSelectedVideo model.selectedVideo
         ]
+
+
+viewSelectedVideo : Maybe Video -> Html Msg
+viewSelectedVideo maybeVideo =
+    case maybeVideo of
+        Just video ->
+            div [ class "intrinsic-container intrinsic-container-4x3" ]
+                [ iframe [ src video.url ] []
+                ]
+
+        Nothing ->
+            div [ class "hidden" ] []
 
 
 viewBubbleContent speechBubbleContent =
     case speechBubbleContent of
-        JustWords text ->
-            Html.text text
+        JustWords theWords ->
+            Html.text theWords
 
-        VideoSuggestions remoteData ->
-            Html.text "It's time to display some videos!"
+        VideoSuggestions id remoteData ->
+            case remoteData of
+                RemoteData.NotAsked ->
+                    Html.text "Now where did I put those videos?"
 
+                RemoteData.Loading ->
+                    Html.text "Just one second, I've got some videos I think you'll like."
+
+                RemoteData.Failure e ->
+                    Html.text "Something's gone wrong with my videos darn it!"
+
+                RemoteData.Success videos ->
+                    viewVideoThumbnails videos
+
+
+viewVideoThumbnails videos =
+    let
+        viewThumbnail video =
+            img
+                [ src video.thumbnailUrl 
+                , onClick <| VideoSelected video
+                ]
+                [ ]
+    in
+    div [] <|
+        List.map viewThumbnail videos
+        
 
 speechBubbleClassList model =
     if model.showSpeechBubble then
@@ -66,12 +104,13 @@ type alias Model =
     , speechBubbleContent : SpeechBubbleContent
     , speechBubbleChoices : List SpeechBubbleContent
     , textInputOpened : Bool
+    , selectedVideo : Maybe Video
     }
 
 
 type SpeechBubbleContent
     = JustWords String
-    | VideoSuggestions (RemoteData List Video)
+    | VideoSuggestions Int (RemoteData.WebData (List Video))
 
 
 type alias Video =
@@ -80,17 +119,66 @@ type alias Video =
     }
 
 
-saySomethingNew : ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
-saySomethingNew theReturn =
-    theReturn
-        |> Return.map (\model -> { model | showSpeechBubble = True })
-        |> Return.effect_ changeBubbleContent
+getRemoteContent speechBubbleContent =
+    case speechBubbleContent of
+        VideoSuggestions id remoteData ->
+            case remoteData of
+                RemoteData.NotAsked ->
+                    let
+                        resultToMsg result =
+                            VideosResponseReceived id <| RemoteData.fromResult result
+
+                        videosRequest =
+                            Http.get "content-data/popular-cartoons.json" (Decode.list videoDecoder)
+                    in
+                    Http.send resultToMsg videosRequest
+
+                _ ->
+                    Cmd.none
+
+        JustWords _ ->
+            Cmd.none
 
 
 changeBubbleContent : Model -> Cmd Msg
 changeBubbleContent model =
     List.More.getSomethingDifferent model.speechBubbleContent model.speechBubbleChoices
         |> Random.generate ChangeBubbleContent
+
+
+updateVideoSuggestions : Int -> (RemoteData.WebData (List Video)) -> Model -> Model
+updateVideoSuggestions id remoteData model =
+    let
+        hasMatchingId bubbleContent =
+            case bubbleContent of
+                VideoSuggestions suggestionsId _ ->
+                    suggestionsId == id
+
+                _ ->
+                    False
+
+        changeBubbleContent modelArg =
+            if modelArg.speechBubbleContent |> hasMatchingId  then
+                { modelArg | speechBubbleContent = VideoSuggestions id remoteData }
+
+            else
+                modelArg
+
+        changeBubbleChoices modelArg =
+            let
+                changeChoice bubbleContent =
+                    if bubbleContent |> hasMatchingId then
+                        VideoSuggestions id remoteData
+
+                    else
+                        bubbleContent
+            in
+            { modelArg | speechBubbleChoices = List.map changeChoice modelArg.speechBubbleChoices }
+    in
+    model
+        |> changeBubbleContent
+        |> changeBubbleChoices
+            
 
 
 -- init
@@ -104,7 +192,7 @@ init =
         initialChoices =
             [ initialBubbleContent
             , JustWords "..."
-            , VideoSuggestions RemoteData.NotAsked
+            , VideoSuggestions 1 RemoteData.NotAsked
             ]
 
         initialModel =
@@ -112,6 +200,7 @@ init =
             , speechBubbleContent = initialBubbleContent
             , speechBubbleChoices = initialChoices
             , textInputOpened = False
+            , selectedVideo = Nothing
             }
     in
     ( initialModel, Cmd.none )
@@ -121,6 +210,8 @@ type Msg
     = CheckClickLocation Encode.Value
     | BotClicked BotPart
     | ChangeBubbleContent SpeechBubbleContent
+    | VideosResponseReceived Int (RemoteData.WebData (List Video))
+    | VideoSelected Video
 
 
 type BotPart
@@ -137,11 +228,18 @@ update msg model =
         BotClicked botPart ->
             respondToClick botPart ( model, Cmd.none )
 
-        ChangeBubbleContent newContent ->
-            Return.map
-                -- cover the case where we don't have the remote data that is the newContent
-                (\_ -> { model | speechBubbleContent = newContent })
-                ( model, Cmd.none )
+        ChangeBubbleContent bubbleContent ->
+            ( model, Cmd.none )
+                |> Return.map (\_ -> { model | speechBubbleContent = bubbleContent })
+                |> Return.command (getRemoteContent bubbleContent)
+
+        VideosResponseReceived id remoteData ->
+            ( model, Cmd.none )
+                |> Return.map (updateVideoSuggestions id remoteData)
+
+        VideoSelected video ->
+            ( model, Cmd.none )
+                |> Return.map (\_ -> { model | selectedVideo = Just video })
 
 
 respondToClick botPart theReturn =
@@ -153,6 +251,13 @@ respondToClick botPart theReturn =
 
         NotKeyboard ->
             saySomethingNew theReturn
+
+
+saySomethingNew : ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
+saySomethingNew theReturn =
+    theReturn
+        |> Return.map (\model -> { model | showSpeechBubble = True })
+        |> Return.effect_ changeBubbleContent
 
 
 -- subscriptions
@@ -178,3 +283,10 @@ thingClickedToMsg thingClickedString =
 
     else
         BotClicked NotKeyboard
+
+
+videoDecoder =
+    Decode.map2
+        Video
+        (Decode.field "video" Decode.string)
+        (Decode.field "thumbnail" Decode.string)
