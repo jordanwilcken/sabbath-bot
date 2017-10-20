@@ -6852,6 +6852,195 @@ var _elm_lang$core$Random$cmdMap = F2(
 	});
 _elm_lang$core$Native_Platform.effectManagers['Random'] = {pkg: 'elm-lang/core', init: _elm_lang$core$Random$init, onEffects: _elm_lang$core$Random$onEffects, onSelfMsg: _elm_lang$core$Random$onSelfMsg, tag: 'cmd', cmdMap: _elm_lang$core$Random$cmdMap};
 
+var _elm_lang$dom$Native_Dom = function() {
+
+var fakeNode = {
+	addEventListener: function() {},
+	removeEventListener: function() {}
+};
+
+var onDocument = on(typeof document !== 'undefined' ? document : fakeNode);
+var onWindow = on(typeof window !== 'undefined' ? window : fakeNode);
+
+function on(node)
+{
+	return function(eventName, decoder, toTask)
+	{
+		return _elm_lang$core$Native_Scheduler.nativeBinding(function(callback) {
+
+			function performTask(event)
+			{
+				var result = A2(_elm_lang$core$Json_Decode$decodeValue, decoder, event);
+				if (result.ctor === 'Ok')
+				{
+					_elm_lang$core$Native_Scheduler.rawSpawn(toTask(result._0));
+				}
+			}
+
+			node.addEventListener(eventName, performTask);
+
+			return function()
+			{
+				node.removeEventListener(eventName, performTask);
+			};
+		});
+	};
+}
+
+var rAF = typeof requestAnimationFrame !== 'undefined'
+	? requestAnimationFrame
+	: function(callback) { callback(); };
+
+function withNode(id, doStuff)
+{
+	return _elm_lang$core$Native_Scheduler.nativeBinding(function(callback)
+	{
+		rAF(function()
+		{
+			var node = document.getElementById(id);
+			if (node === null)
+			{
+				callback(_elm_lang$core$Native_Scheduler.fail({ ctor: 'NotFound', _0: id }));
+				return;
+			}
+			callback(_elm_lang$core$Native_Scheduler.succeed(doStuff(node)));
+		});
+	});
+}
+
+
+// FOCUS
+
+function focus(id)
+{
+	return withNode(id, function(node) {
+		node.focus();
+		return _elm_lang$core$Native_Utils.Tuple0;
+	});
+}
+
+function blur(id)
+{
+	return withNode(id, function(node) {
+		node.blur();
+		return _elm_lang$core$Native_Utils.Tuple0;
+	});
+}
+
+
+// SCROLLING
+
+function getScrollTop(id)
+{
+	return withNode(id, function(node) {
+		return node.scrollTop;
+	});
+}
+
+function setScrollTop(id, desiredScrollTop)
+{
+	return withNode(id, function(node) {
+		node.scrollTop = desiredScrollTop;
+		return _elm_lang$core$Native_Utils.Tuple0;
+	});
+}
+
+function toBottom(id)
+{
+	return withNode(id, function(node) {
+		node.scrollTop = node.scrollHeight;
+		return _elm_lang$core$Native_Utils.Tuple0;
+	});
+}
+
+function getScrollLeft(id)
+{
+	return withNode(id, function(node) {
+		return node.scrollLeft;
+	});
+}
+
+function setScrollLeft(id, desiredScrollLeft)
+{
+	return withNode(id, function(node) {
+		node.scrollLeft = desiredScrollLeft;
+		return _elm_lang$core$Native_Utils.Tuple0;
+	});
+}
+
+function toRight(id)
+{
+	return withNode(id, function(node) {
+		node.scrollLeft = node.scrollWidth;
+		return _elm_lang$core$Native_Utils.Tuple0;
+	});
+}
+
+
+// SIZE
+
+function width(options, id)
+{
+	return withNode(id, function(node) {
+		switch (options.ctor)
+		{
+			case 'Content':
+				return node.scrollWidth;
+			case 'VisibleContent':
+				return node.clientWidth;
+			case 'VisibleContentWithBorders':
+				return node.offsetWidth;
+			case 'VisibleContentWithBordersAndMargins':
+				var rect = node.getBoundingClientRect();
+				return rect.right - rect.left;
+		}
+	});
+}
+
+function height(options, id)
+{
+	return withNode(id, function(node) {
+		switch (options.ctor)
+		{
+			case 'Content':
+				return node.scrollHeight;
+			case 'VisibleContent':
+				return node.clientHeight;
+			case 'VisibleContentWithBorders':
+				return node.offsetHeight;
+			case 'VisibleContentWithBordersAndMargins':
+				var rect = node.getBoundingClientRect();
+				return rect.bottom - rect.top;
+		}
+	});
+}
+
+return {
+	onDocument: F3(onDocument),
+	onWindow: F3(onWindow),
+
+	focus: focus,
+	blur: blur,
+
+	getScrollTop: getScrollTop,
+	setScrollTop: F2(setScrollTop),
+	getScrollLeft: getScrollLeft,
+	setScrollLeft: F2(setScrollLeft),
+	toBottom: toBottom,
+	toRight: toRight,
+
+	height: F2(height),
+	width: F2(width)
+};
+
+}();
+
+var _elm_lang$dom$Dom$blur = _elm_lang$dom$Native_Dom.blur;
+var _elm_lang$dom$Dom$focus = _elm_lang$dom$Native_Dom.focus;
+var _elm_lang$dom$Dom$NotFound = function (a) {
+	return {ctor: 'NotFound', _0: a};
+};
+
 var _elm_lang$virtual_dom$VirtualDom_Debug$wrap;
 var _elm_lang$virtual_dom$VirtualDom_Debug$wrapWithFlags;
 
@@ -13959,6 +14148,19 @@ var _user$project$Main$speechBubbleClassList = function (model) {
 			}
 		});
 };
+var _user$project$Main$textInputClassList = function (isOpen) {
+	return isOpen ? _elm_lang$html$Html_Attributes$classList(
+		{
+			ctor: '::',
+			_0: {ctor: '_Tuple2', _0: 'hidden', _1: false},
+			_1: {ctor: '[]'}
+		}) : _elm_lang$html$Html_Attributes$classList(
+		{
+			ctor: '::',
+			_0: {ctor: '_Tuple2', _0: 'hidden', _1: true},
+			_1: {ctor: '[]'}
+		});
+};
 var _user$project$Main$viewSelectedVideo = function (maybeVideo) {
 	var _p0 = function () {
 		var _p1 = maybeVideo;
@@ -14004,7 +14206,7 @@ var _user$project$Main$viewSelectedVideo = function (maybeVideo) {
 };
 var _user$project$Main$Model = F5(
 	function (a, b, c, d, e) {
-		return {showSpeechBubble: a, speechBubbleContent: b, speechBubbleChoices: c, textInputOpened: d, selectedVideo: e};
+		return {showSpeechBubble: a, speechBubbleContent: b, speechBubbleChoices: c, isTextInputOpen: d, selectedVideo: e};
 	});
 var _user$project$Main$VideoSuggestions = function (a) {
 	return {ctor: 'VideoSuggestions', _0: a};
@@ -14059,7 +14261,7 @@ var _user$project$Main$init = function () {
 			}
 		}
 	};
-	var initialModel = {showSpeechBubble: false, speechBubbleContent: initialBubbleContent, speechBubbleChoices: initialChoices, textInputOpened: false, selectedVideo: _elm_lang$core$Maybe$Nothing};
+	var initialModel = {showSpeechBubble: false, speechBubbleContent: initialBubbleContent, speechBubbleChoices: initialChoices, isTextInputOpen: false, selectedVideo: _elm_lang$core$Maybe$Nothing};
 	return {ctor: '_Tuple2', _0: initialModel, _1: _elm_lang$core$Platform_Cmd$none};
 }();
 var _user$project$Main$Nevermind = {ctor: 'Nevermind'};
@@ -14070,7 +14272,11 @@ var _user$project$Main$viewVideoThumbnails = F2(
 	function (videos, caption) {
 		var captionEl = A2(
 			_elm_lang$html$Html$p,
-			{ctor: '[]'},
+			{
+				ctor: '::',
+				_0: _elm_lang$html$Html_Attributes$class('thumbnail-caption'),
+				_1: {ctor: '[]'}
+			},
 			{
 				ctor: '::',
 				_0: _elm_lang$html$Html$text(caption),
@@ -14182,13 +14388,19 @@ var _user$project$Main$respondToClick = F2(
 		var _p9 = botPart;
 		if (_p9.ctor === 'Keyboard') {
 			return A2(
-				_Fresheyeball$elm_return$Return$map,
-				function (model) {
-					return _elm_lang$core$Native_Utils.update(
-						model,
-						{textInputOpened: !model.textInputOpened});
-				},
-				theReturn);
+				_Fresheyeball$elm_return$Return$command,
+				A2(
+					_elm_lang$core$Task$attempt,
+					_elm_lang$core$Basics$always(_user$project$Main$Nevermind),
+					_elm_lang$dom$Dom$focus('text-input')),
+				A2(
+					_Fresheyeball$elm_return$Return$map,
+					function (model) {
+						return _elm_lang$core$Native_Utils.update(
+							model,
+							{isTextInputOpen: !model.isTextInputOpen});
+					},
+					theReturn));
 		} else {
 			return _user$project$Main$saySomethingNew(theReturn);
 		}
@@ -14315,7 +14527,11 @@ var _user$project$Main$view = function (model) {
 					{
 						ctor: '::',
 						_0: _elm_lang$html$Html_Attributes$id('text-input'),
-						_1: {ctor: '[]'}
+						_1: {
+							ctor: '::',
+							_0: _user$project$Main$textInputClassList(model.isTextInputOpen),
+							_1: {ctor: '[]'}
+						}
 					},
 					{ctor: '[]'}),
 				_1: {

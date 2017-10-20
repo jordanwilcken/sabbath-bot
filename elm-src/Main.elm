@@ -1,5 +1,6 @@
 module Main exposing (main)
 
+import Dom
 import Http
 import Json.Decode as Decode
 import Json.Encode as Encode
@@ -30,7 +31,10 @@ view model =
                 ]
                 [ viewBubbleContent model.speechBubbleContent ]
             ]
-        , input [ id "text-input" ] []
+        , input
+            [ id "text-input"
+            , textInputClassList model.isTextInputOpen
+            ] []
         , viewSelectedVideo model.selectedVideo
         ]
 
@@ -87,10 +91,22 @@ viewVideoThumbnails videos caption =
             List.map viewThumbnail videos
 
         captionEl =
-            p [] [ text caption ]
+            p [ class "thumbnail-caption" ] [ text caption ]
     in
     div [] (List.append images [ captionEl ])
-        
+
+
+textInputClassList isOpen =
+    if isOpen then
+        classList
+            [ ( "hidden", False )
+            ]
+
+    else
+        classList
+            [ ( "hidden", True )
+            ]
+
 
 speechBubbleClassList model =
     if model.showSpeechBubble then
@@ -117,7 +133,7 @@ type alias Model =
     { showSpeechBubble : Bool
     , speechBubbleContent : SpeechBubbleContent
     , speechBubbleChoices : List SpeechBubbleContent
-    , textInputOpened : Bool
+    , isTextInputOpen : Bool
     , selectedVideo : Maybe Records.Video
     }
 
@@ -210,7 +226,7 @@ init =
             { showSpeechBubble = False
             , speechBubbleContent = initialBubbleContent
             , speechBubbleChoices = initialChoices
-            , textInputOpened = False
+            , isTextInputOpen = False
             , selectedVideo = Nothing
             }
     in
@@ -261,12 +277,21 @@ update msg model =
 respondToClick botPart theReturn =
     case botPart of
         Keyboard ->
-            Return.map
-                (\model -> { model | textInputOpened = not model.textInputOpened })
-                theReturn
+            theReturn
+                |> Return.map (\model -> { model | isTextInputOpen = not model.isTextInputOpen })
+                |> Return.effect_ focusTheTextInput
 
         NotKeyboard ->
             saySomethingNew theReturn
+
+
+focusTheTextInput model =
+    if model.isTextInputOpen then
+        Dom.focus "text-input"
+            |> Task.attempt (always Nevermind)
+
+    else
+        Cmd.none
 
 
 saySomethingNew : ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
