@@ -20,7 +20,6 @@ main {
     border-radius: 1em;
     padding: 0.5em;
     vertical-align: top;
-    width: 18em;
 }
 
 #text-input {
@@ -49,4 +48,12 @@ main {
   left: 0;
   width: 100%;
   height: 100%;
+}
+
+.video-thumbnail {
+  margin: 5px;
+}
+
+.thumbnail-caption {
+  text-align: center;
 }

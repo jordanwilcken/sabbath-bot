@@ -6,6 +6,7 @@ import Json.Encode as Encode
 import List.More
 import Ports
 import Random
+import Records
 import RemoteData exposing (RemoteData)
 import Return exposing (Return, map)
 import Task
@@ -34,7 +35,7 @@ view model =
         ]
 
 
-viewSelectedVideo : Maybe Video -> Html Msg
+viewSelectedVideo : Maybe Records.Video -> Html Msg
 viewSelectedVideo maybeVideo =
     let
         ( containerClass, containerChildren ) =
@@ -57,8 +58,8 @@ viewBubbleContent speechBubbleContent =
         JustWords theWords ->
             Html.text theWords
 
-        VideoSuggestions id remoteData ->
-            case remoteData of
+        VideoSuggestions videoSuggestions ->
+            case videoSuggestions.videos of
                 RemoteData.NotAsked ->
                     Html.text "Now where did I put those videos?"
 
@@ -69,20 +70,26 @@ viewBubbleContent speechBubbleContent =
                     Html.text "Something's gone wrong with my videos darn it!"
 
                 RemoteData.Success videos ->
-                    viewVideoThumbnails videos
+                    viewVideoThumbnails videos videoSuggestions.text
 
 
-viewVideoThumbnails videos =
+viewVideoThumbnails videos caption =
     let
         viewThumbnail video =
             img
-                [ src video.thumbnailUrl 
+                [ class "video-thumbnail"
+                , src video.thumbnailUrl 
                 , onClick <| VideoSelected video
                 ]
                 [ ]
+
+        images =
+            List.map viewThumbnail videos
+
+        captionEl =
+            p [] [ text caption ]
     in
-    div [] <|
-        List.map viewThumbnail videos
+    div [] (List.append images [ captionEl ])
         
 
 speechBubbleClassList model =
@@ -111,29 +118,23 @@ type alias Model =
     , speechBubbleContent : SpeechBubbleContent
     , speechBubbleChoices : List SpeechBubbleContent
     , textInputOpened : Bool
-    , selectedVideo : Maybe Video
+    , selectedVideo : Maybe Records.Video
     }
 
 
 type SpeechBubbleContent
     = JustWords String
-    | VideoSuggestions Int (RemoteData.WebData (List Video))
-
-
-type alias Video =
-    { url : String
-    , thumbnailUrl : String
-    }
+    | VideoSuggestions Records.VideoSuggestions
 
 
 getRemoteContent speechBubbleContent =
     case speechBubbleContent of
-        VideoSuggestions id remoteData ->
-            case remoteData of
+        VideoSuggestions videoSuggestions ->
+            case videoSuggestions.videos of
                 RemoteData.NotAsked ->
                     let
                         resultToMsg result =
-                            VideosResponseReceived id <| RemoteData.fromResult result
+                            VideosResponseReceived videoSuggestions.id <| RemoteData.fromResult result
 
                         videosRequest =
                             Http.get "content-data/popular-cartoons.json" (Decode.list videoDecoder)
@@ -153,20 +154,23 @@ changeBubbleContent model =
         |> Random.generate ChangeBubbleContent
 
 
-updateVideoSuggestions : Int -> (RemoteData.WebData (List Video)) -> Model -> Model
+updateVideoSuggestions : Int -> (RemoteData.WebData (List Records.Video)) -> Model -> Model
 updateVideoSuggestions id remoteData model =
     let
         hasMatchingId bubbleContent =
             case bubbleContent of
-                VideoSuggestions suggestionsId _ ->
-                    suggestionsId == id
+                VideoSuggestions videoSuggestions ->
+                    videoSuggestions.id == id
 
                 _ ->
                     False
 
+        suggestions =
+            Records.VideoSuggestions id remoteData "How about some scripture videos?"
+
         changeBubbleContent modelArg =
             if modelArg.speechBubbleContent |> hasMatchingId  then
-                { modelArg | speechBubbleContent = VideoSuggestions id remoteData }
+                { modelArg | speechBubbleContent = VideoSuggestions suggestions }
 
             else
                 modelArg
@@ -175,7 +179,7 @@ updateVideoSuggestions id remoteData model =
             let
                 changeChoice bubbleContent =
                     if bubbleContent |> hasMatchingId then
-                        VideoSuggestions id remoteData
+                        VideoSuggestions suggestions
 
                     else
                         bubbleContent
@@ -199,7 +203,7 @@ init =
         initialChoices =
             [ initialBubbleContent
             , JustWords "..."
-            , VideoSuggestions 1 RemoteData.NotAsked
+            , VideoSuggestions <| Records.VideoSuggestions 1 RemoteData.NotAsked ""
             ]
 
         initialModel =
@@ -217,8 +221,8 @@ type Msg
     = CheckClickLocation Encode.Value
     | BotClicked BotPart
     | ChangeBubbleContent SpeechBubbleContent
-    | VideosResponseReceived Int (RemoteData.WebData (List Video))
-    | VideoSelected Video
+    | VideosResponseReceived Int (RemoteData.WebData (List Records.Video))
+    | VideoSelected Records.Video
     | Nevermind
 
 
@@ -299,6 +303,6 @@ thingClickedToMsg thingClickedString =
 
 videoDecoder =
     Decode.map2
-        Video
+        Records.Video
         (Decode.field "video" Decode.string)
         (Decode.field "thumbnail" Decode.string)
