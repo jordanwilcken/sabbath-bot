@@ -14130,6 +14130,10 @@ var _user$project$Records$Keydown = F2(
 	function (a, b) {
 		return {keyCode: a, inputValue: b};
 	});
+var _user$project$Records$PicturePlusWords = F2(
+	function (a, b) {
+		return {imageSource: a, words: b};
+	});
 
 var _user$project$Main$formatWords = F2(
 	function (count, words) {
@@ -14255,6 +14259,9 @@ var _user$project$Main$Talking = function (a) {
 	return {ctor: 'Talking', _0: a};
 };
 var _user$project$Main$Staring = {ctor: 'Staring'};
+var _user$project$Main$PicturePlusWords = function (a) {
+	return {ctor: 'PicturePlusWords', _0: a};
+};
 var _user$project$Main$VideoSuggestions = function (a) {
 	return {ctor: 'VideoSuggestions', _0: a};
 };
@@ -14301,12 +14308,25 @@ var _user$project$Main$JustWords = function (a) {
 var _user$project$Main$init = function () {
 	var initialChoices = {
 		ctor: '::',
-		_0: _user$project$Main$JustWords('...'),
+		_0: _user$project$Main$JustWords('Someday I hope to be animated. Someday...'),
 		_1: {
 			ctor: '::',
 			_0: _user$project$Main$VideoSuggestions(
 				A3(_user$project$Records$VideoSuggestions, 1, _krisajenkins$remotedata$RemoteData$NotAsked, '')),
-			_1: {ctor: '[]'}
+			_1: {
+				ctor: '::',
+				_0: _user$project$Main$JustWords('If you click on my keyboard you can write me a message.'),
+				_1: {
+					ctor: '::',
+					_0: _user$project$Main$JustWords('Do you think kids will like me?'),
+					_1: {
+						ctor: '::',
+						_0: _user$project$Main$PicturePlusWords(
+							A2(_user$project$Records$PicturePlusWords, 'garden-of-eden.jpg', 'Checkout out this cool Lego creation! It\'s from a scripture story. Can you tell which story? Do you think you could make a Lego creation of a scripture story? I think that would be super awesome!')),
+						_1: {ctor: '[]'}
+					}
+				}
+			}
 		}
 	};
 	var initialModel = {botState: _user$project$Main$Staring, dontUnderstandCount: 0, speechBubbleChoices: initialChoices, isTextInputOpen: false, selectedVideo: _elm_lang$core$Maybe$Nothing};
@@ -14383,41 +14403,67 @@ var _user$project$Main$viewBubbleContent = function (botState) {
 		return {ctor: '[]'};
 	} else {
 		var _p6 = _p5._0;
-		if (_p6.ctor === 'JustWords') {
-			return {
-				ctor: '::',
-				_0: _elm_lang$html$Html$text(_p6._0),
-				_1: {ctor: '[]'}
-			};
-		} else {
-			var _p8 = _p6._0;
-			var _p7 = _p8.videos;
-			switch (_p7.ctor) {
-				case 'NotAsked':
-					return {
+		switch (_p6.ctor) {
+			case 'JustWords':
+				return {
+					ctor: '::',
+					_0: _elm_lang$html$Html$text(_p6._0),
+					_1: {ctor: '[]'}
+				};
+			case 'PicturePlusWords':
+				var _p7 = _p6._0;
+				return {
+					ctor: '::',
+					_0: A2(
+						_elm_lang$html$Html$img,
+						{
+							ctor: '::',
+							_0: _elm_lang$html$Html_Attributes$src(_p7.imageSource),
+							_1: {ctor: '[]'}
+						},
+						{ctor: '[]'}),
+					_1: {
 						ctor: '::',
-						_0: _elm_lang$html$Html$text('Now where did I put those videos?'),
+						_0: A2(
+							_elm_lang$html$Html$p,
+							{ctor: '[]'},
+							{
+								ctor: '::',
+								_0: _elm_lang$html$Html$text(_p7.words),
+								_1: {ctor: '[]'}
+							}),
 						_1: {ctor: '[]'}
-					};
-				case 'Loading':
-					return {
-						ctor: '::',
-						_0: _elm_lang$html$Html$text('Just one second, I\'ve got some videos I think you\'ll like.'),
-						_1: {ctor: '[]'}
-					};
-				case 'Failure':
-					return {
-						ctor: '::',
-						_0: _elm_lang$html$Html$text('Something\'s gone wrong with my videos darn it!'),
-						_1: {ctor: '[]'}
-					};
-				default:
-					return {
-						ctor: '::',
-						_0: A2(_user$project$Main$viewVideoThumbnails, _p7._0, _p8.text),
-						_1: {ctor: '[]'}
-					};
-			}
+					}
+				};
+			default:
+				var _p9 = _p6._0;
+				var _p8 = _p9.videos;
+				switch (_p8.ctor) {
+					case 'NotAsked':
+						return {
+							ctor: '::',
+							_0: _elm_lang$html$Html$text('Now where did I put those videos?'),
+							_1: {ctor: '[]'}
+						};
+					case 'Loading':
+						return {
+							ctor: '::',
+							_0: _elm_lang$html$Html$text('Just one second, I\'ve got some videos I think you\'ll like.'),
+							_1: {ctor: '[]'}
+						};
+					case 'Failure':
+						return {
+							ctor: '::',
+							_0: _elm_lang$html$Html$text('Something\'s gone wrong with my videos darn it!'),
+							_1: {ctor: '[]'}
+						};
+					default:
+						return {
+							ctor: '::',
+							_0: A2(_user$project$Main$viewVideoThumbnails, _p8._0, _p9.text),
+							_1: {ctor: '[]'}
+						};
+				}
 		}
 	}
 };
@@ -14426,27 +14472,30 @@ var _user$project$Main$VideosResponseReceived = F2(
 		return {ctor: 'VideosResponseReceived', _0: a, _1: b};
 	});
 var _user$project$Main$getRemoteContent = function (speechBubbleContent) {
-	var _p9 = speechBubbleContent;
-	if (_p9.ctor === 'VideoSuggestions') {
-		var _p11 = _p9._0;
-		var _p10 = _p11.videos;
-		if (_p10.ctor === 'NotAsked') {
-			var videosRequest = A2(
-				_elm_lang$http$Http$get,
-				'content-data/popular-cartoons.json',
-				_elm_lang$core$Json_Decode$list(_user$project$Main$videoDecoder));
-			var resultToMsg = function (result) {
-				return A2(
-					_user$project$Main$VideosResponseReceived,
-					_p11.id,
-					_krisajenkins$remotedata$RemoteData$fromResult(result));
-			};
-			return A2(_elm_lang$http$Http$send, resultToMsg, videosRequest);
-		} else {
+	var _p10 = speechBubbleContent;
+	switch (_p10.ctor) {
+		case 'VideoSuggestions':
+			var _p12 = _p10._0;
+			var _p11 = _p12.videos;
+			if (_p11.ctor === 'NotAsked') {
+				var videosRequest = A2(
+					_elm_lang$http$Http$get,
+					'content-data/popular-cartoons.json',
+					_elm_lang$core$Json_Decode$list(_user$project$Main$videoDecoder));
+				var resultToMsg = function (result) {
+					return A2(
+						_user$project$Main$VideosResponseReceived,
+						_p12.id,
+						_krisajenkins$remotedata$RemoteData$fromResult(result));
+				};
+				return A2(_elm_lang$http$Http$send, resultToMsg, videosRequest);
+			} else {
+				return _elm_lang$core$Platform_Cmd$none;
+			}
+		case 'PicturePlusWords':
 			return _elm_lang$core$Platform_Cmd$none;
-		}
-	} else {
-		return _elm_lang$core$Platform_Cmd$none;
+		default:
+			return _elm_lang$core$Platform_Cmd$none;
 	}
 };
 var _user$project$Main$UserStillTyping = {ctor: 'UserStillTyping'};
@@ -14461,9 +14510,9 @@ var _user$project$Main$NewContentChosen = function (a) {
 };
 var _user$project$Main$chooseNewContent = function (model) {
 	var someContent = function () {
-		var _p12 = model.botState;
-		if (_p12.ctor === 'Talking') {
-			return _p12._0;
+		var _p13 = model.botState;
+		if (_p13.ctor === 'Talking') {
+			return _p13._0;
 		} else {
 			return _user$project$Main$JustWords('this is just some content I made because I had to');
 		}
@@ -14478,8 +14527,8 @@ var _user$project$Main$saySomethingNew = function (theReturn) {
 };
 var _user$project$Main$respondToClick = F2(
 	function (botPart, theReturn) {
-		var _p13 = botPart;
-		if (_p13.ctor === 'Keyboard') {
+		var _p14 = botPart;
+		if (_p14.ctor === 'Keyboard') {
 			return A2(
 				_Fresheyeball$elm_return$Return$effect_,
 				_user$project$Main$focusTheTextInput,
@@ -14497,31 +14546,31 @@ var _user$project$Main$respondToClick = F2(
 	});
 var _user$project$Main$update = F2(
 	function (msg, model) {
-		var _p14 = msg;
-		switch (_p14.ctor) {
+		var _p15 = msg;
+		switch (_p15.ctor) {
 			case 'CheckClickLocation':
 				return {
 					ctor: '_Tuple2',
 					_0: model,
-					_1: _user$project$Ports$checkClickLocation(_p14._0)
+					_1: _user$project$Ports$checkClickLocation(_p15._0)
 				};
 			case 'BotClicked':
 				return A2(
 					_user$project$Main$respondToClick,
-					_p14._0,
+					_p15._0,
 					{ctor: '_Tuple2', _0: model, _1: _elm_lang$core$Platform_Cmd$none});
 			case 'NewContentChosen':
-				var _p16 = _p14._0;
+				var _p17 = _p15._0;
 				return A2(
 					_Fresheyeball$elm_return$Return$command,
-					_user$project$Main$getRemoteContent(_p16),
+					_user$project$Main$getRemoteContent(_p17),
 					A2(
 						_Fresheyeball$elm_return$Return$map,
-						function (_p15) {
+						function (_p16) {
 							return _elm_lang$core$Native_Utils.update(
 								model,
 								{
-									botState: _user$project$Main$Talking(_p16),
+									botState: _user$project$Main$Talking(_p17),
 									dontUnderstandCount: 0
 								});
 						},
@@ -14529,7 +14578,7 @@ var _user$project$Main$update = F2(
 			case 'VideosResponseReceived':
 				return A2(
 					_Fresheyeball$elm_return$Return$map,
-					A2(_user$project$Main$updateVideoSuggestions, _p14._0, _p14._1),
+					A2(_user$project$Main$updateVideoSuggestions, _p15._0, _p15._1),
 					{ctor: '_Tuple2', _0: model, _1: _elm_lang$core$Platform_Cmd$none});
 			case 'VideoSelected':
 				return A2(
@@ -14537,19 +14586,19 @@ var _user$project$Main$update = F2(
 					_user$project$Ports$scrollIntoView('video-container'),
 					A2(
 						_Fresheyeball$elm_return$Return$map,
-						function (_p17) {
+						function (_p18) {
 							return _elm_lang$core$Native_Utils.update(
 								model,
 								{
-									selectedVideo: _elm_lang$core$Maybe$Just(_p14._0)
+									selectedVideo: _elm_lang$core$Maybe$Just(_p15._0)
 								});
 						},
 						{ctor: '_Tuple2', _0: model, _1: _elm_lang$core$Platform_Cmd$none}));
 			case 'UserSaidSomething':
-				var _p18 = function () {
-					var _p19 = _user$project$Main$comeUpWithResponse(_p14._0);
-					if (_p19.ctor === 'Ok') {
-						return {ctor: '_Tuple2', _0: _p19._0, _1: 0};
+				var _p19 = function () {
+					var _p20 = _user$project$Main$comeUpWithResponse(_p15._0);
+					if (_p20.ctor === 'Ok') {
+						return {ctor: '_Tuple2', _0: _p20._0, _1: 0};
 					} else {
 						var newCount = model.dontUnderstandCount + 1;
 						var formatted = _user$project$Main$formatWords(newCount);
@@ -14558,8 +14607,8 @@ var _user$project$Main$update = F2(
 						return {ctor: '_Tuple2', _0: response, _1: newCount};
 					}
 				}();
-				var theResponse = _p18._0;
-				var newCount = _p18._1;
+				var theResponse = _p19._0;
+				var newCount = _p19._1;
 				return A2(
 					_Fresheyeball$elm_return$Return$command,
 					_user$project$Ports$clearTextInput(
@@ -14684,7 +14733,7 @@ var _user$project$Main$main = _elm_lang$html$Html$program(
 var Elm = {};
 Elm['Main'] = Elm['Main'] || {};
 if (typeof _user$project$Main$main !== 'undefined') {
-    _user$project$Main$main(Elm['Main'], 'Main', {"types":{"message":"Main.Msg","aliases":{"Records.VideoSuggestions":{"type":"{ id : Int , videos : RemoteData.WebData (List Records.Video) , text : String }","args":[]},"RemoteData.WebData":{"type":"RemoteData.RemoteData Http.Error a","args":["a"]},"Http.Response":{"type":"{ url : String , status : { code : Int, message : String } , headers : Dict.Dict String String , body : body }","args":["body"]},"Records.Video":{"type":"{ url : String, thumbnailUrl : String }","args":[]}},"unions":{"Main.Msg":{"tags":{"CheckClickLocation":["Json.Encode.Value"],"BotClicked":["Main.BotPart"],"UserSaidSomething":["String"],"VideosResponseReceived":["Int","RemoteData.WebData (List Records.Video)"],"Nevermind":[],"UserStillTyping":[],"VideoSelected":["Records.Video"],"NewContentChosen":["Main.SpeechBubbleContent"]},"args":[]},"Dict.NColor":{"tags":{"Black":[],"BBlack":[],"Red":[],"NBlack":[]},"args":[]},"Main.BotPart":{"tags":{"Keyboard":[],"NotKeyboard":[]},"args":[]},"Http.Error":{"tags":{"Timeout":[],"BadStatus":["Http.Response String"],"BadPayload":["String","Http.Response String"],"BadUrl":["String"],"NetworkError":[]},"args":[]},"Dict.LeafColor":{"tags":{"LBlack":[],"LBBlack":[]},"args":[]},"Main.SpeechBubbleContent":{"tags":{"JustWords":["String"],"VideoSuggestions":["Records.VideoSuggestions"]},"args":[]},"Json.Encode.Value":{"tags":{"Value":[]},"args":[]},"Dict.Dict":{"tags":{"RBNode_elm_builtin":["Dict.NColor","k","v","Dict.Dict k v","Dict.Dict k v"],"RBEmpty_elm_builtin":["Dict.LeafColor"]},"args":["k","v"]},"RemoteData.RemoteData":{"tags":{"Failure":["e"],"NotAsked":[],"Success":["a"],"Loading":[]},"args":["e","a"]}}},"versions":{"elm":"0.18.0"}});
+    _user$project$Main$main(Elm['Main'], 'Main', {"types":{"message":"Main.Msg","aliases":{"Records.PicturePlusWords":{"type":"{ imageSource : String, words : String }","args":[]},"Records.VideoSuggestions":{"type":"{ id : Int , videos : RemoteData.WebData (List Records.Video) , text : String }","args":[]},"RemoteData.WebData":{"type":"RemoteData.RemoteData Http.Error a","args":["a"]},"Http.Response":{"type":"{ url : String , status : { code : Int, message : String } , headers : Dict.Dict String String , body : body }","args":["body"]},"Records.Video":{"type":"{ url : String, thumbnailUrl : String }","args":[]}},"unions":{"Main.Msg":{"tags":{"CheckClickLocation":["Json.Encode.Value"],"BotClicked":["Main.BotPart"],"UserSaidSomething":["String"],"VideosResponseReceived":["Int","RemoteData.WebData (List Records.Video)"],"Nevermind":[],"UserStillTyping":[],"VideoSelected":["Records.Video"],"NewContentChosen":["Main.SpeechBubbleContent"]},"args":[]},"Dict.NColor":{"tags":{"Black":[],"BBlack":[],"Red":[],"NBlack":[]},"args":[]},"Main.BotPart":{"tags":{"Keyboard":[],"NotKeyboard":[]},"args":[]},"Http.Error":{"tags":{"Timeout":[],"BadStatus":["Http.Response String"],"BadPayload":["String","Http.Response String"],"BadUrl":["String"],"NetworkError":[]},"args":[]},"Dict.LeafColor":{"tags":{"LBlack":[],"LBBlack":[]},"args":[]},"Main.SpeechBubbleContent":{"tags":{"JustWords":["String"],"PicturePlusWords":["Records.PicturePlusWords"],"VideoSuggestions":["Records.VideoSuggestions"]},"args":[]},"Json.Encode.Value":{"tags":{"Value":[]},"args":[]},"Dict.Dict":{"tags":{"RBNode_elm_builtin":["Dict.NColor","k","v","Dict.Dict k v","Dict.Dict k v"],"RBEmpty_elm_builtin":["Dict.LeafColor"]},"args":["k","v"]},"RemoteData.RemoteData":{"tags":{"Failure":["e"],"NotAsked":[],"Success":["a"],"Loading":[]},"args":["e","a"]}}},"versions":{"elm":"0.18.0"}});
 }
 
 if (typeof define === "function" && define['amd'])

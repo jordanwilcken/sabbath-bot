@@ -1,4 +1,4 @@
-module Records exposing (Keydown, Video, VideoSuggestions)
+module Records exposing (Keydown, PicturePlusWords, Video, VideoSuggestions)
 
 import RemoteData
 
@@ -19,4 +19,10 @@ type alias Video =
 type alias Keydown =
     { keyCode : Int
     , inputValue : String
+    }
+
+
+type alias PicturePlusWords =
+    { imageSource : String
+    , words : String
     }

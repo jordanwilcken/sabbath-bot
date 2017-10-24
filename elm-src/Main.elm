@@ -74,6 +74,11 @@ viewBubbleContent botState =
                 JustWords theWords ->
                     [ Html.text theWords ]
 
+                PicturePlusWords picturePlusWords ->
+                    [ img [ src picturePlusWords.imageSource ] [ ]
+                    , p [ ] [ text picturePlusWords.words ]
+                    ]
+
                 VideoSuggestions videoSuggestions ->
                     case videoSuggestions.videos of
                         RemoteData.NotAsked ->
@@ -155,6 +160,7 @@ type BotState
 type SpeechBubbleContent
     = JustWords String
     | VideoSuggestions Records.VideoSuggestions
+    | PicturePlusWords Records.PicturePlusWords
 
 
 getRemoteContent speechBubbleContent =
@@ -173,6 +179,9 @@ getRemoteContent speechBubbleContent =
 
                 _ ->
                     Cmd.none
+        
+        PicturePlusWords _ ->
+            Cmd.none
 
         JustWords _ ->
             Cmd.none
@@ -240,8 +249,14 @@ updateVideoSuggestions id remoteData model =
 init =
     let
         initialChoices =
-            [ JustWords "..."
+            [ JustWords "Someday I hope to be animated. Someday..."
             , VideoSuggestions <| Records.VideoSuggestions 1 RemoteData.NotAsked ""
+            , JustWords "If you click on my keyboard you can write me a message."
+            , JustWords "Do you think kids will like me?"
+            , PicturePlusWords <|
+                Records.PicturePlusWords
+                    "garden-of-eden.jpg"
+                    "Checkout out this cool Lego creation! It's from a scripture story. Can you tell which story? Do you think you could make a Lego creation of a scripture story? I think that would be super awesome!"
             ]
 
         initialModel =
