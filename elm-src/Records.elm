@@ -1,6 +1,7 @@
-module Records exposing(Video, VideoSuggestions)
+module Records exposing (Keydown, Video, VideoSuggestions)
 
 import RemoteData
+
 
 type alias VideoSuggestions =
     { id : Int
@@ -15,3 +16,7 @@ type alias Video =
     }
 
 
+type alias Keydown =
+    { keyCode : Int
+    , inputValue : String
+    }

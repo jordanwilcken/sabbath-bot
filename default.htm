@@ -45,6 +45,10 @@
                 document.getElementById(id).scrollIntoView();
             }, 1000)
         });
+
+        elmApp.ports.clearTextInput.subscribe(function () {
+            document.getElementById("text-input").value = "";
+        });
     </script>
 </body>
 </html>

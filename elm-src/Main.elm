@@ -1,6 +1,9 @@
 module Main exposing (main)
 
 import Dom
+import Html exposing (..)
+import Html.Attributes exposing (..)
+import Html.Events exposing (on, onClick)
 import Http
 import Json.Decode as Decode
 import Json.Encode as Encode
@@ -11,32 +14,36 @@ import Records
 import RemoteData exposing (RemoteData)
 import Return exposing (Return, map)
 import Task
-import Html exposing (..)
-import Html.Attributes exposing (..)
-import Html.Events exposing (on, onClick)
 
 
 view model =
-    node "main" [ id "the-main" ]
-        [ div [ id "sabbath-bot-bounds"]
+    node "main"
+        [ id "the-main" ]
+        [ div [ id "sabbath-bot-bounds" ]
             [ img
                 [ id "sabbath-bot"
                 , src "sabbath-bot.jpg"
-                , on "click" clickEventDecoder
+                , on "click" checkClickLocation
                 ]
                 []
             , div
                 [ id "speech-bubble"
                 , speechBubbleClassList model
                 ]
-                [ viewBubbleContent model.speechBubbleContent ]
+                (viewBubbleContent model.botState)
             ]
         , input
             [ id "text-input"
             , textInputClassList model.isTextInputOpen
-            ] []
+            , on "keydown" (Decode.map keydownToMsg keydownDecoder)
+            ]
+            []
         , viewSelectedVideo model.selectedVideo
         ]
+
+
+checkClickLocation =
+    Decode.map CheckClickLocation Decode.value
 
 
 viewSelectedVideo : Maybe Records.Video -> Html Msg
@@ -57,24 +64,29 @@ viewSelectedVideo maybeVideo =
         containerChildren
 
 
-viewBubbleContent speechBubbleContent =
-    case speechBubbleContent of
-        JustWords theWords ->
-            Html.text theWords
+viewBubbleContent botState =
+    case botState of
+        Staring ->
+            []
 
-        VideoSuggestions videoSuggestions ->
-            case videoSuggestions.videos of
-                RemoteData.NotAsked ->
-                    Html.text "Now where did I put those videos?"
+        Talking speechBubbleContent ->
+            case speechBubbleContent of
+                JustWords theWords ->
+                    [ Html.text theWords ]
 
-                RemoteData.Loading ->
-                    Html.text "Just one second, I've got some videos I think you'll like."
+                VideoSuggestions videoSuggestions ->
+                    case videoSuggestions.videos of
+                        RemoteData.NotAsked ->
+                            [ Html.text "Now where did I put those videos?" ]
 
-                RemoteData.Failure e ->
-                    Html.text "Something's gone wrong with my videos darn it!"
+                        RemoteData.Loading ->
+                            [ Html.text "Just one second, I've got some videos I think you'll like." ]
 
-                RemoteData.Success videos ->
-                    viewVideoThumbnails videos videoSuggestions.text
+                        RemoteData.Failure e ->
+                            [ Html.text "Something's gone wrong with my videos darn it!" ]
+
+                        RemoteData.Success videos ->
+                            [ viewVideoThumbnails videos videoSuggestions.text ]
 
 
 viewVideoThumbnails videos caption =
@@ -82,10 +94,10 @@ viewVideoThumbnails videos caption =
         viewThumbnail video =
             img
                 [ class "video-thumbnail"
-                , src video.thumbnailUrl 
+                , src video.thumbnailUrl
                 , onClick <| VideoSelected video
                 ]
-                [ ]
+                []
 
         images =
             List.map viewThumbnail videos
@@ -101,7 +113,6 @@ textInputClassList isOpen =
         classList
             [ ( "hidden", False )
             ]
-
     else
         classList
             [ ( "hidden", True )
@@ -109,33 +120,36 @@ textInputClassList isOpen =
 
 
 speechBubbleClassList model =
-    if model.showSpeechBubble then
-        classList
-            [ ( "hidden", False )
-            , ( "inline-block", True )
-            ]
+    case model.botState of
+        Talking _ ->
+            classList
+                [ ( "hidden", False )
+                , ( "inline-block", True )
+                ]
 
-    else
-        classList
-            [ ( "hidden", True )
-            , ( "inline-block", False )
-            ]
+        Staring ->
+            classList
+                [ ( "hidden", True )
+                , ( "inline-block", False )
+                ]
 
-
-clickEventDecoder =
-    Decode.map CheckClickLocation Decode.value
 
 
 -- Model
 
 
 type alias Model =
-    { showSpeechBubble : Bool
-    , speechBubbleContent : SpeechBubbleContent
+    { botState : BotState
+    , dontUnderstandCount : Int
     , speechBubbleChoices : List SpeechBubbleContent
     , isTextInputOpen : Bool
     , selectedVideo : Maybe Records.Video
     }
+
+
+type BotState
+    = Staring
+    | Talking SpeechBubbleContent
 
 
 type SpeechBubbleContent
@@ -164,13 +178,22 @@ getRemoteContent speechBubbleContent =
             Cmd.none
 
 
-changeBubbleContent : Model -> Cmd Msg
-changeBubbleContent model =
-    List.More.getSomethingDifferent model.speechBubbleContent model.speechBubbleChoices
-        |> Random.generate ChangeBubbleContent
+chooseNewContent : Model -> Cmd Msg
+chooseNewContent model =
+    let
+        someContent =
+            case model.botState of
+                Talking speechBubbleContent ->
+                    speechBubbleContent
+
+                Staring ->
+                    JustWords "this is just some content I made because I had to"
+    in
+    List.More.getSomethingDifferent someContent model.speechBubbleChoices
+        |> Random.generate NewContentChosen
 
 
-updateVideoSuggestions : Int -> (RemoteData.WebData (List Records.Video)) -> Model -> Model
+updateVideoSuggestions : Int -> RemoteData.WebData (List Records.Video) -> Model -> Model
 updateVideoSuggestions id remoteData model =
     let
         hasMatchingId bubbleContent =
@@ -185,18 +208,21 @@ updateVideoSuggestions id remoteData model =
             Records.VideoSuggestions id remoteData "How about some scripture videos?"
 
         changeBubbleContent modelArg =
-            if modelArg.speechBubbleContent |> hasMatchingId  then
-                { modelArg | speechBubbleContent = VideoSuggestions suggestions }
+            case modelArg.botState of
+                Talking speechBubbleContent ->
+                    if speechBubbleContent |> hasMatchingId then
+                        { modelArg | botState = Talking <| VideoSuggestions suggestions }
+                    else
+                        modelArg
 
-            else
-                modelArg
+                Staring ->
+                    modelArg
 
         changeBubbleChoices modelArg =
             let
                 changeChoice bubbleContent =
                     if bubbleContent |> hasMatchingId then
                         VideoSuggestions suggestions
-
                     else
                         bubbleContent
             in
@@ -205,7 +231,7 @@ updateVideoSuggestions id remoteData model =
     model
         |> changeBubbleContent
         |> changeBubbleChoices
-            
+
 
 
 -- init
@@ -213,18 +239,14 @@ updateVideoSuggestions id remoteData model =
 
 init =
     let
-        initialBubbleContent =
-            JustWords "I'm told I have to 'Say something new'."
-
         initialChoices =
-            [ initialBubbleContent
-            , JustWords "..."
+            [ JustWords "..."
             , VideoSuggestions <| Records.VideoSuggestions 1 RemoteData.NotAsked ""
             ]
 
         initialModel =
-            { showSpeechBubble = False
-            , speechBubbleContent = initialBubbleContent
+            { botState = Staring
+            , dontUnderstandCount = 0
             , speechBubbleChoices = initialChoices
             , isTextInputOpen = False
             , selectedVideo = Nothing
@@ -236,7 +258,9 @@ init =
 type Msg
     = CheckClickLocation Encode.Value
     | BotClicked BotPart
-    | ChangeBubbleContent SpeechBubbleContent
+    | NewContentChosen SpeechBubbleContent
+    | UserSaidSomething String
+    | UserStillTyping
     | VideosResponseReceived Int (RemoteData.WebData (List Records.Video))
     | VideoSelected Records.Video
     | Nevermind
@@ -256,9 +280,15 @@ update msg model =
         BotClicked botPart ->
             respondToClick botPart ( model, Cmd.none )
 
-        ChangeBubbleContent bubbleContent ->
+        NewContentChosen bubbleContent ->
             ( model, Cmd.none )
-                |> Return.map (\_ -> { model | speechBubbleContent = bubbleContent })
+                |> Return.map
+                    (\_ ->
+                        { model
+                            | botState = Talking bubbleContent
+                            , dontUnderstandCount = 0
+                        }
+                    )
                 |> Return.command (getRemoteContent bubbleContent)
 
         VideosResponseReceived id remoteData ->
@@ -269,6 +299,39 @@ update msg model =
             ( model, Cmd.none )
                 |> Return.map (\_ -> { model | selectedVideo = Just video })
                 |> Return.command (Ports.scrollIntoView "video-container")
+
+        UserSaidSomething thingSaid ->
+            let
+                ( theResponse, newCount ) =
+                    case comeUpWithResponse thingSaid of
+                        Ok response ->
+                            ( response, 0 )
+
+                        Err _ ->
+                            let
+                                newCount =
+                                    model.dontUnderstandCount + 1
+
+                                formatted =
+                                    formatWords <| newCount
+
+                                response =
+                                    JustWords <| formatted "I like you. But I don't understand a word you just said."
+                            in
+                            ( response, newCount )
+            in
+            ( model, Cmd.none )
+                |> Return.map
+                    (\currentModel ->
+                        { currentModel
+                            | botState = Talking <| theResponse
+                            , dontUnderstandCount = newCount
+                        }
+                    )
+                |> Return.command (Ports.clearTextInput { })
+
+        UserStillTyping ->
+            ( model, Cmd.none )
 
         Nevermind ->
             ( model, Cmd.none )
@@ -289,7 +352,6 @@ focusTheTextInput model =
     if model.isTextInputOpen then
         Dom.focus "text-input"
             |> Task.attempt (always Nevermind)
-
     else
         Cmd.none
 
@@ -297,8 +359,8 @@ focusTheTextInput model =
 saySomethingNew : ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
 saySomethingNew theReturn =
     theReturn
-        |> Return.map (\model -> { model | showSpeechBubble = True })
-        |> Return.effect_ changeBubbleContent
+        |> Return.effect_ chooseNewContent
+
 
 
 -- subscriptions
@@ -306,13 +368,16 @@ saySomethingNew theReturn =
 
 subscriptions model =
     Ports.somethingClicked thingClickedToMsg
-    
+
+
 
 -- main
 
 
-main = Html.program
-    { init = init, update = update, view = view, subscriptions = subscriptions }
+main =
+    Html.program
+        { init = init, update = update, view = view, subscriptions = subscriptions }
+
 
 
 -- details
@@ -321,7 +386,6 @@ main = Html.program
 thingClickedToMsg thingClickedString =
     if thingClickedString == "keyboard" then
         BotClicked Keyboard
-
     else
         BotClicked NotKeyboard
 
@@ -331,3 +395,42 @@ videoDecoder =
         Records.Video
         (Decode.field "video" Decode.string)
         (Decode.field "thumbnail" Decode.string)
+
+
+keydownToMsg keydown =
+    if keydown.keyCode == 13 then
+        UserSaidSomething keydown.inputValue
+    else
+        UserStillTyping
+
+
+keydownDecoder =
+    Decode.map2
+        Records.Keydown
+        (Decode.field "keyCode" Decode.int)
+        (Decode.at [ "target", "value" ] Decode.string)
+
+
+formatWords count words =
+    if count > 1 then
+        words ++ " (x" ++ toString count ++ ")"
+    else
+        words
+
+
+comeUpWithResponse thingSaid =
+    let
+        thingSaidContains arg =
+            String.contains arg thingSaid
+    in
+    if thingSaidContains "color" then
+        JustWords "Orange. My favorite color is orange."
+            |> Result.Ok
+    else if thingSaidContains "name" then
+        JustWords "My name is Sabbath Bot.  Isn't that cool?"
+            |> Result.Ok
+    else if thingSaidContains "can't" then
+        JustWords "I don't like to think about \"can't\". Makes me feel all grumpy. Can we talk about something else instead?"
+            |> Result.Ok
+    else
+        Result.Err "I got nothing, sorry."

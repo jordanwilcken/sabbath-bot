@@ -2,6 +2,7 @@ module List.More exposing (getSomethingDifferent)
 
 import Random
 
+
 getSomethingDifferent : a -> List a -> Random.Generator a
 getSomethingDifferent theItem theList =
     let
@@ -29,4 +30,3 @@ getSomethingDifferent theItem theList =
                 |> Random.map getItemAt
     in
     randomItemResult
-
